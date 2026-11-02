@@ -34,9 +34,9 @@ Actualmente no existe un laboratorio virtual funcional ni un motor de simulació
 
 ## Backend
 
-- Java 17 declarado en el proyecto.
+- Java 17 declarado y compilación limpia verificada con `release 17` usando JDK 21.0.5; ejecución con JDK 17 pendiente de verificar.
 - Spring Boot 3.4.2.
-- Maven.
+- Maven Wrapper disponible, fijado a Maven 3.9.9 y utilizado correctamente para compilar, ejecutar tests y arrancar.
 - API REST.
 - Spring Security.
 - JWT.
@@ -44,7 +44,7 @@ Actualmente no existe un laboratorio virtual funcional ni un motor de simulació
 
 ## Persistencia
 
-- MySQL.
+- MySQL 9.2.0 en el entorno local validado: `localhost:3307`, esquema `newtonbox`.
 - JPA/Hibernate.
 - Configuración actual mediante `application.properties`.
 - Actualización automática del esquema mediante `ddl-auto=update`.
@@ -98,7 +98,9 @@ La eliminación de usuarios requiere revisión debido a sus relaciones con otras
 
 ### Estado
 
-🟡 **Implementado en código — pendiente de validación completa**
+🟢 **Flujo de registro correcto validado en el entorno local**
+
+Se ha validado `POST /auth/register` con los campos JSON `username` y `password`: respuesta HTTP `200`, sin contraseña en la respuesta, creación del usuario y asociación al rol global `RESEARCHER` mediante `user_roles`. La comprobación en MySQL confirmó formato BCrypt y ausencia de filas adicionales inesperadas. Esta validación no cubre entradas inválidas, usuarios duplicados ni login.
 
 El flujo actual incluye:
 
@@ -108,13 +110,11 @@ El flujo actual incluye:
 4. asignación del rol global `RESEARCHER`;
 5. persistencia del usuario.
 
-### Problema conocido
+### Preparación necesaria
 
 El registro depende de que el rol `RESEARCHER` exista previamente en la base de datos.
 
-Actualmente no se ha identificado un mecanismo reproducible de inicialización de roles.
-
-Por tanto, una instalación nueva podría requerir preparación manual de la base de datos.
+El catálogo se prepara manualmente con `scripts/dev/seed-security-catalog.sql`, después de crear las tablas. No existe inicialización automática al arrancar.
 
 ---
 
@@ -154,7 +154,7 @@ Los roles y permisos no se almacenan en el token. El usuario y sus autoridades s
 
 ### Problemas detectados
 
-- existen secretos JWT almacenados en configuración versionada;
+- la configuración local JWT está ignorada por Git; la posible exposición histórica de secretos sigue pendiente de revisión;
 - se han detectado logs que pueden mostrar tokens completos;
 - debe revisarse el tratamiento de tokens con firma incorrecta;
 - debe revisarse el comportamiento del filtro JWT sobre rutas públicas;
@@ -178,9 +178,9 @@ Existen los roles:
 
 Los roles globales forman parte de las autoridades cargadas por Spring Security.
 
-### Problemas pendientes
+El script manual `scripts/dev/seed-security-catalog.sql` inicializa los tres roles y los cuatro permisos definidos en los enums. Se ha ejecutado dos veces consecutivas en MySQL 9.2.0, sin errores ni duplicados. No depende de IDs fijos y requiere ejecuciones no simultáneas porque `roles.role_enum` no tiene unicidad declarada.
 
-No se ha identificado todavía un mecanismo de inicialización de estos roles en una instalación nueva.
+### Problemas pendientes
 
 Las diferencias funcionales entre `RESEARCHER` y `REVIEWER` no están completamente definidas.
 
@@ -193,6 +193,8 @@ Las diferencias funcionales entre `RESEARCHER` y `REVIEWER` no están completame
 🔴 **Infraestructura existente, uso funcional incompleto**
 
 Existen entidades y estructuras relacionadas con permisos.
+
+Los valores definidos son `CREATE`, `READ`, `UPDATE` y `DELETE`. El seed no inserta asociaciones en `role_permissions`: la matriz de permisos por rol no está acordada y esa tabla permanece vacía en el entorno validado.
 
 Los permisos pueden formar parte de las autoridades del usuario.
 
@@ -430,6 +432,8 @@ Deberá diferenciarse claramente entre:
 
 Se utilizan relaciones JPA entre las entidades principales.
 
+Hibernate ha creado las nueve tablas de aplicación del esquema local: `users`, `roles`, `permissions`, `user_roles`, `role_permissions`, `experiments`, `participants`, `results` y `comments`, con índices y claves foráneas sin errores DDL registrados. Un arranque posterior con `ddl-auto=validate` también se completó correctamente. Esto no constituye una validación completa de cascadas ni de todas las operaciones de persistencia.
+
 ### Riesgos identificados
 
 Debe revisarse especialmente:
@@ -450,20 +454,15 @@ Las cascadas actuales podrían provocar efectos no deseados al eliminar entidade
 
 ### Estado
 
-🔴 **No reproducible de forma segura todavía**
+🟡 **Entorno local preparado y validado; preparación completa desde cero pendiente de documentar**
 
-La configuración actual utiliza MySQL local.
+El entorno de desarrollo validado utiliza MySQL 9.2.0 en `localhost:3307`, esquema `newtonbox`, con `utf8mb4` / `utf8mb4_0900_ai_ci` y una cuenta local limitada a ese esquema. La aplicación ha conectado y arrancado correctamente contra esta instancia.
 
-Actualmente se ha detectado:
+`src/main/resources/application.properties` es configuración local ignorada por Git. La plantilla pública versionada es `src/main/resources/application.properties.example`; utiliza variables de entorno para las contraseñas y el secreto JWT.
 
-- URL de conexión almacenada en configuración;
-- credenciales almacenadas directamente en archivos versionados;
-- `ddl-auto=update`;
-- ausencia de perfiles de entorno;
-- ausencia de migraciones;
-- ausencia de scripts claros de inicialización.
+Los valores por defecto de la plantilla apuntan a MySQL en el puerto `3306` y al usuario `root`; deben sustituirse por los del entorno de desarrollo preparado, sin utilizar la cuenta administrativa para la aplicación.
 
-Antes de ampliar el proyecto deberá hacerse reproducible la preparación del entorno de base de datos.
+La configuración utiliza `ddl-auto=update`. El esquema y la cuenta se preparan manualmente; Hibernate crea las tablas y el script manual `scripts/dev/seed-security-catalog.sql` prepara el catálogo base. No hay perfiles de entorno ni migraciones. La preparación completa desde una copia limpia todavía no está documentada ni automatizada.
 
 ---
 
@@ -471,24 +470,11 @@ Antes de ampliar el proyecto deberá hacerse reproducible la preparación del en
 
 ### Estado
 
-🔴 **Problema crítico pendiente**
+🟡 **Configuración local sensible excluida; historial pendiente de revisión**
 
-Se han detectado valores sensibles dentro de archivos versionados.
+El archivo local `application.properties` no está versionado y está ignorado expresamente. La plantilla `application.properties.example` permite aportar las contraseñas y el secreto JWT mediante variables de entorno, sin incluir sus valores.
 
-Entre ellos existen configuraciones relacionadas con:
-
-- base de datos;
-- JWT;
-- credenciales de Spring Security.
-
-Los valores concretos no deben reproducirse en documentación.
-
-Será necesario:
-
-- retirar secretos del repositorio;
-- utilizar configuración externa;
-- revisar el historial Git cuando corresponda;
-- definir configuración segura para desarrollo.
+Esto no acredita la eliminación de secretos del historial Git ni su rotación completa. La posible exposición histórica sigue pendiente de revisión. Ningún valor sensible debe reproducirse en documentación.
 
 ---
 
@@ -510,13 +496,15 @@ También deberá revisarse el nivel y contenido general del logging antes de uti
 
 ### Estado
 
-🔴 **Cobertura prácticamente inexistente**
+🟡 **Suite actual ejecutada correctamente; cobertura muy limitada**
 
 Actualmente se ha identificado únicamente una prueba básica de contexto:
 
 ```text
 NewtonboxApplicationTests.contextLoads()
 ```
+
+`./mvnw.cmd -B -ntp test` se ha completado correctamente en el entorno local: una prueba, cero fallos y cero errores. Esta prueba carga el contexto y depende de la configuración local y de MySQL; no dispone de un entorno de pruebas aislado. El registro se validó manualmente, no mediante un test automatizado de API.
 
 No existen pruebas suficientes para validar:
 
@@ -575,20 +563,13 @@ La documentación existente anteriormente era muy limitada.
 
 ### Estado
 
-🔴 **Requiere saneamiento**
+🟢 **Exclusiones básicas verificadas en el repositorio actual**
 
-Se han detectado artefactos que no deberían formar parte del repositorio fuente, como:
+El repositorio oficial es [daniii283/NewtonBox](https://github.com/daniii283/NewtonBox).
 
-- archivos compilados;
-- contenido de `target`;
-- informes generados;
-- estado interno de Maven;
-- configuración compilada;
-- determinados archivos del IDE.
+`.gitignore` excluye `target/`, `.idea/`, `*.iml` y `src/main/resources/application.properties`. No hay archivos versionados bajo esas rutas o patrones en el estado inspeccionado. La plantilla `application.properties.example` y Maven Wrapper sí están versionados.
 
-También se detectaron diferencias históricas de capitalización en paquetes entre artefactos compilados y código fuente.
-
-Debe definirse un `.gitignore` adecuado y limpiar el repositorio cuidadosamente sin eliminar archivos útiles de forma indiscriminada.
+Esta comprobación describe el árbol actual; no supone un saneamiento del historial Git.
 
 ---
 
@@ -650,7 +631,7 @@ Su presencia en código no implica todavía validación funcional completa.
 
 Actualmente se consideran incompletas o pendientes de revisión profunda:
 
-- inicialización de roles y permisos;
+- definición de asociaciones entre roles y permisos (el catálogo dispone de seed manual);
 - auto-registro en experimentos;
 - utilización real de permisos CRUD;
 - roles locales de participantes;
@@ -698,8 +679,8 @@ Antes de ampliar significativamente NewtonBox resulta necesario:
 
 1. garantizar un arranque reproducible del backend;
 2. definir correctamente la preparación de la base de datos;
-3. resolver la inicialización de roles;
-4. retirar secretos del código versionado;
+3. definir la política de asociaciones entre roles y permisos, actualmente sin inicializar;
+4. revisar la exposición histórica de secretos y su rotación;
 5. revisar los principales riesgos de seguridad;
 6. revisar integridad y cascadas JPA;
 7. validar el flujo funcional principal;
@@ -708,6 +689,8 @@ Antes de ampliar significativamente NewtonBox resulta necesario:
 10. documentar la arquitectura real.
 
 Estas prioridades deberán convertirse posteriormente en fases concretas dentro de `ROADMAP.md`.
+
+La compilación, el arranque contra MySQL local, el catálogo base y el registro correcto ya se han validado. Sigue pendiente completar la reproducibilidad desde cero y la validación funcional del resto del backend.
 
 ---
 
@@ -727,7 +710,7 @@ La primera validación funcional completa del backend debería demostrar como m�
 10. comprobar accesos permitidos;
 11. comprobar accesos denegados.
 
-Hasta completar esta validación no debería asumirse que el núcleo actual está completamente estabilizado.
+El catálogo base y el registro correcto ya se han validado en el entorno local. No se ha validado todavía este flujo completo desde una base limpia, ni el login ni los pasos posteriores. Hasta completarlo no debería asumirse que el núcleo actual está completamente estabilizado.
 
 ---
 
