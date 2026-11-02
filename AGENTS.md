@@ -394,6 +394,14 @@ Estos documentos no deben convertirse en logs de implementación.
 
 GitHub es el punto de sincronización del progreso del proyecto.
 
+Cada tarea relevante se trabaja en una rama propia con un nombre descriptivo y uno de estos prefijos: `feature/`, `fix/`, `docs/` o `chore/`.
+
+Antes de modificar archivos, Codex debe comprobar la rama activa y crear o seleccionar la rama correspondiente. Los cambios de la tarea se realizan únicamente en esa rama.
+
+`main` no se modifica directamente. La rama se publica en GitHub y sus cambios se presentan mediante una Pull Request contra `main`.
+
+No se realiza el merge sin aprobación explícita del usuario. Una vez aprobada, la PR puede integrarse en `main`.
+
 Se deben preferir commits pequeños y coherentes.
 
 Cada commit debería representar una unidad de cambio comprensible.
@@ -413,11 +421,13 @@ Se deben evitar commits con muchos cambios no relacionados.
 
 No se deben versionar secretos, artefactos de compilación ni archivos específicos del IDE.
 
+Los commits representan cambios reales del proyecto. No se crean commits cuyo único propósito sea comunicar mensajes entre agentes; para ello se utilizan Issues y comentarios de PR.
+
 ---
 
 # 20. Finalización de tareas y checkpoints
 
-Después de implementar y validar una tarea, el desarrollador debe hacer commit y push del cambio a GitHub.
+Después de implementar y validar una tarea, los cambios deben quedar en commits pequeños y coherentes, publicados en la rama de la tarea y presentados mediante una PR contra `main`. El desarrollador puede realizar estas operaciones o encargárselas a Codex, manteniendo el modo PAIR.
 
 A partir de ese momento puede realizarse un checkpoint del proyecto.
 
@@ -626,9 +636,11 @@ Desarrollador + Codex
         ↓
 inspección / implementación / revisión / validación
         ↓
-commit + push
+commits + push de la rama
         ↓
-GitHub
+PR en GitHub contra main
+        ↓
+revisión y cambios en la misma rama
         ↓
 checkpoint del proyecto
         ↓
@@ -661,6 +673,19 @@ Mantiene la visión global sobre:
 - documentación;
 - secuenciación de tareas;
 - preparación de prompts concretos para Codex.
+
+### Coordinación mediante Issues y Pull Requests
+
+GitHub es el canal compartido de coordinación entre el desarrollador, ChatGPT y Codex. La PR de cada tarea reúne su contexto, diff, commits, validaciones y estado.
+
+- Si existe una Issue asociada, Codex debe consultarla antes de trabajar y vincularla desde la PR.
+- Las observaciones y requisitos de ChatGPT en la Issue o PR forman parte del contexto de la tarea, respetando las instrucciones del usuario y las reglas existentes de alcance y control de cambios. Las contradicciones deben señalarse antes de actuar.
+- Codex deja en la descripción o comentarios de la PR un resumen breve del resultado, las validaciones realizadas, las limitaciones y los asuntos pendientes.
+- Las revisiones y solicitudes de cambio deben quedar asociadas a la PR o Issue correspondiente. Codex consulta las actualizaciones antes de retomar el trabajo, responde a las observaciones y realiza los cambios correspondientes en la misma rama, actualizando la PR.
+- ChatGPT puede revisar directamente el diff, los commits y el estado publicados en GitHub.
+- Issues y comentarios de PR se utilizan para coordinación y trazabilidad, evitando logs innecesarios y mensajes repetitivos.
+
+Este mecanismo mantiene el modo PAIR y no altera las reglas de alcance, arquitectura, seguridad, documentación ni control de cambios.
 
 ---
 
