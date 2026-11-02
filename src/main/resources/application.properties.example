@@ -1,0 +1,23 @@
+# Application
+spring.application.name=newtonbox
+server.port=8080
+
+# Database
+spring.datasource.url=${DB_URL:jdbc:mysql://localhost:3306/newtonbox}
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# Development security user
+spring.security.user.name=${SPRING_SECURITY_USER:dev}
+spring.security.user.password=${SPRING_SECURITY_PASSWORD}
+
+# JWT
+app.jwt.expirationMs=${JWT_EXPIRATION_MS:86400000}
+app.jwt.secret=${JWT_SECRET}
